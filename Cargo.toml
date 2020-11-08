@@ -1,0 +1,23 @@
+[package]
+name = "veisku"
+version = "0.0.0"
+authors = ["yvt <i@yvt.jp>"]
+edition = "2018"
+license = "GPL-3.0-or-later"
+publish = false
+
+[dependencies]
+env_logger = { version = "0.8.1" }
+yaml-rust = { version = "0.4.4" }
+globwalk = { version = "0.8.0" }
+anyhow = { version = "1.0.34" }
+either = { version = "1.6.1" }
+regex = { version = "1.4.2" }
+serde = { version = "1.0.117", features = ["derive"] }
+clap = { version = "3.0.0-beta.2", features = ["wrap_help"] }
+toml = { version = "0.5.7" }
+log = { version = "0.4.11" }
+
+[[bin]]
+path = "src/main.rs"
+name = "v"
