@@ -160,6 +160,11 @@ pub struct Cfg {
     #[serde(default)]
     pub root: String,
 
+    /// Allows the modification of document metadata, even though it might lose
+    /// non-semantic information (such as comments). Currently unused.
+    #[serde(default)]
+    pub writable: bool,
+
     /// The patterns of file names to recognize as documents. The patterns are
     /// processed by [`::globwalk`], which supports `gitignore`'s syntax.
     /// The paths are relative to the document root.
