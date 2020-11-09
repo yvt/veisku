@@ -29,7 +29,7 @@ fn main() -> Result<()> {
         cfg::Subcommand::Edit(subcmd) => {
             verb_open(&root, subcmd, default_editor).map(|x| match x {})
         }
-        cfg::Subcommand::Ls(subcmd) => verb_ls(&root, subcmd),
+        cfg::Subcommand::Ls(subcmd) => verb_ls(&root, &opts, subcmd),
         cfg::Subcommand::Run(subcmd) => verb_run(&root, subcmd).map(|x| match x {}),
     }
 }
@@ -101,10 +101,10 @@ fn default_editor() -> OsString {
     }
 }
 
-fn verb_ls(root: &root::DocRoot, sc: &cfg::List) -> Result<()> {
+fn verb_ls(root: &root::DocRoot, opts: &cfg::Opts, sc: &cfg::List) -> Result<()> {
     let query = query::Query::from_opt(&root.cfg, &sc.query)?;
     let docs = query::select_all(root, &query);
-    let mut out = std::io::BufWriter::new(std::io::stdout());
+    let mut out = render::Pager::new(opts);
 
     #[derive(Debug, thiserror::Error)]
     #[error("An error occurred while enumerating matching documents")]
@@ -189,6 +189,8 @@ fn verb_ls(root: &root::DocRoot, sc: &cfg::List) -> Result<()> {
             write!(out, "\n").context(WriteError)?;
         }
     }
+
+    out.finish().context(WriteError)?;
     Ok(())
 }
 

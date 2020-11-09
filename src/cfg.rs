@@ -2,9 +2,18 @@ use clap::Clap;
 use serde::Deserialize;
 use std::{collections::HashMap, ffi::OsString, str::FromStr};
 
+// Command-line options
+// --------------------------------------------------------------------
+
 /// Personal file-oriented document manager
 #[derive(Debug, Clap)]
 pub struct Opts {
+    /// The command to invoke a pager.
+    ///
+    /// An empty value disables the use of a pager.
+    #[clap(long = "pager", multiple = true, require_delimiter = true)]
+    pub pager: Option<Vec<OsString>>,
+
     #[clap(subcommand)]
     pub subcmd: Subcommand,
 }
@@ -168,6 +177,9 @@ impl FromStr for Criterion {
         }
     }
 }
+
+// Document root configuration
+// --------------------------------------------------------------------
 
 /// Document root configuration (`.veisku/config.toml`)
 #[derive(Debug, Deserialize)]
