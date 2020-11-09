@@ -4,8 +4,8 @@ use crate::{
     root::DocRoot,
 };
 use anyhow::{Context, Error, Result};
+use serde_yaml::Value;
 use std::fmt;
-use yaml_rust::Yaml;
 
 /// Compiled document query
 #[derive(Debug)]
@@ -166,7 +166,7 @@ impl Matcher for Meta {
     fn matches(&self, doc: &mut DocRead) -> Result<bool> {
         let meta_path;
         let meta = if self.key == "path" {
-            meta_path = Yaml::String(doc.path().to_string_lossy().into_owned());
+            meta_path = Value::String(doc.path().to_string_lossy().into_owned());
             &meta_path
         } else {
             &doc.ensure_meta()?[&*self.key]
@@ -187,13 +187,13 @@ impl Matcher for Meta {
 }
 
 impl MetaOp {
-    fn matches(&self, yaml: &Yaml) -> Option<bool> {
+    fn matches(&self, yaml: &Value) -> Option<bool> {
         match yaml {
-            Yaml::String(st) => Some(match self {
+            Value::String(st) => Some(match self {
                 Self::Eq(rhs) => **st == *rhs,
                 Self::Regex(regex) => regex.is_match(st),
             }),
-            Yaml::Array(array) => {
+            Value::Sequence(array) => {
                 if array.is_empty() {
                     Some(false)
                 } else {
@@ -219,7 +219,7 @@ impl MetaOp {
                         })
                 }
             }
-            Yaml::Null => Some(false),
+            Value::Null => Some(false),
             _ => {
                 // Uncomparable
                 None

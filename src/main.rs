@@ -126,16 +126,16 @@ fn verb_ls(root: &root::DocRoot, sc: &cfg::List) -> Result<()> {
             write!(out, "{:10} ", name.to_string_lossy()).context(WriteError)?;
 
             // Tags
-            if let yaml_rust::Yaml::Array(array) = &meta["tags"] {
+            if let serde_yaml::Value::Sequence(array) = &meta["tags"] {
                 for e in array.iter() {
-                    if let yaml_rust::Yaml::String(st) = e {
+                    if let serde_yaml::Value::String(st) = e {
                         write!(out, "[{}] ", st).context(WriteError)?;
                     }
                 }
             }
 
             // Title
-            if let yaml_rust::Yaml::String(st) = &meta["title"] {
+            if let serde_yaml::Value::String(st) = &meta["title"] {
                 write!(out, "{}", st).context(WriteError)?;
             }
 

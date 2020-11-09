@@ -1,17 +1,17 @@
 //! Document metadata parsing
 use anyhow::{Context, Result};
+use serde_yaml::Value;
 use std::{
     fmt,
     io::{ErrorKind, Read},
     path::{Path, PathBuf},
 };
-use yaml_rust::Yaml;
 
 /// Represents a reference to a document. Metadata is read as needed (lazy
 /// loading).
 pub struct DocRead {
     path: PathBuf,
-    meta: Option<Yaml>,
+    meta: Option<Value>,
 }
 
 impl DocRead {
@@ -23,7 +23,7 @@ impl DocRead {
         &self.path
     }
 
-    pub fn ensure_meta(&mut self) -> Result<&Yaml> {
+    pub fn ensure_meta(&mut self) -> Result<&Value> {
         if self.meta.is_none() {
             log::trace!("Reading the metadata of {:?}", self.path);
 
@@ -33,7 +33,7 @@ impl DocRead {
             self.meta = Some(
                 read_md_preamble(file)
                     .with_context(|| format!("Failed to read metadata from {:?}", self.path))?
-                    .unwrap_or(Yaml::Null),
+                    .unwrap_or(Value::Null),
             );
         }
         Ok(self.meta.as_ref().unwrap())
@@ -46,7 +46,7 @@ impl fmt::Display for DocRead {
     }
 }
 
-fn read_md_preamble(mut file: impl Read) -> Result<Option<Yaml>> {
+fn read_md_preamble(mut file: impl Read) -> Result<Option<Value>> {
     // We need to find a preamble in the file stream. A preamble is supposed
     // to look like the following:
     //
@@ -119,10 +119,10 @@ fn read_md_preamble(mut file: impl Read) -> Result<Option<Yaml>> {
         std::str::from_utf8(&pre_bytes).context("Failed to decdoe the preamble as UTF-8")?;
     log::trace!("pre_str = {:?}", pre_str);
 
-    // Now, parse the preamble. It should contain exactly one YAML document.
-    let mut docs = yaml_rust::YamlLoader::load_from_str(pre_str)
-        .context("Failed to parse the preamble as YAML")?;
-    Ok(Some(docs.pop().unwrap()))
+    // Now, parse the preamble.
+    let yaml_value =
+        serde_yaml::from_str(pre_str).context("Failed to parse the preamble as YAML")?;
+    Ok(Some(yaml_value))
 }
 
 #[cfg(test)]
