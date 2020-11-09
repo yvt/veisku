@@ -7,9 +7,11 @@ license = "GPL-3.0-or-later"
 publish = false
 
 [dependencies]
+unicode-width = { version = "0.1.8" }
 env_logger = { version = "0.8.1" }
 serde_json = { version = "1.0.59" }
 serde_yaml = { version = "0.8.14" }
+ansi_term = { version = "0.12.1" }
 thiserror = { version = "1.0.22" }
 globwalk = { version = "0.8.0" }
 anyhow = { version = "1.0.34" }

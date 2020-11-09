@@ -1,3 +1,4 @@
+use ansi_term::{Color, Style};
 use anyhow::{Context, Result};
 use clap::Clap;
 use std::{convert::Infallible, ffi::OsString, io::Write};
@@ -5,6 +6,7 @@ use std::{convert::Infallible, ffi::OsString, io::Write};
 mod cfg;
 mod doc;
 mod query;
+mod render;
 mod root;
 
 fn main() -> Result<()> {
@@ -121,25 +123,42 @@ fn verb_ls(root: &root::DocRoot, sc: &cfg::List) -> Result<()> {
         for doc_or_error in docs {
             let mut doc = doc_or_error.context(SearchError)?;
             let path = doc.path().to_owned();
-            let name = path.file_stem().unwrap();
+            let name = path.file_stem().unwrap().to_string_lossy();
             let meta = doc.ensure_meta().with_context(|| ReadError(path.clone()))?;
 
             // Base name
-            write!(out, "{:10} ", name.to_string_lossy()).context(WriteError)?;
+            write!(
+                out,
+                "{} ",
+                // gray
+                Color::Fixed(245).paint(render::fit_to_width(&name, 10))
+            )
+            .context(WriteError)?;
 
             // Tags
             if let serde_yaml::Value::Sequence(array) = &meta["tags"] {
                 for e in array.iter() {
                     if let serde_yaml::Value::String(st) = e {
-                        write!(out, "[{}] ", st).context(WriteError)?;
+                        write!(
+                            out,
+                            "{} ",
+                            Style::new()
+                                .fg(Color::Green)
+                                .on(Color::Fixed(238))
+                                .paint(format!(" {} ", st))
+                        )
+                        .context(WriteError)?;
                     }
                 }
             }
 
             // Title
-            if let serde_yaml::Value::String(st) = &meta["title"] {
-                write!(out, "{}", st).context(WriteError)?;
-            }
+            let title = if let serde_yaml::Value::String(st) = &meta["title"] {
+                &**st
+            } else {
+                &*name
+            };
+            write!(out, "{}", title).context(WriteError)?;
 
             write!(out, "\n").context(WriteError)?;
         }
