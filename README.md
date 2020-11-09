@@ -62,3 +62,15 @@ root = ".veisku/issues"
 ```
 
 `.veisku` could be placed in the home directory so that the `v` command can be used wherever the current working directory is, as long as it's inside the home directory.
+
+## Related Works
+
+ - [`git-issue`]: A minimalist Git-based issue management system. I wrote `veisku` as a more performant, more generic replacement of `git-issue` to suit my use case. `veisku` addresses the following problems with `git-issue`, which I personally encountered while using it as a personal task tracker:
+
+     - *Shell scripts are incredibly slow to execute*. I used my custom fork of `git-issue` to display tags in an issue list, colored based on a JSON configuration. The time taken to render an issue list started to be unbearable as the number of issues burgeoned throughout time.
+
+     - *Automatically creating a commit on every change makes the commit history incomprehensible*. It's not trivial to display the edit history of a particular issue. In comparison, `veisku` is not even aware of Git. A user of `veisku` can execute Git commands by `v run git ...` or use a Git frontend of their choice. They can use the command `v show -c 'git,log,-p' ...` to display the edit history of an entry.
+
+ - Any online task tracker such as Trello and online note app such as Evernote: There are many such tools. They are indeed great for collaboration and inter-device synchronization. For a personal, long-lived record, however, I felt it more right to manage it with physical ownership and an application-agnostic data format so that it doesn't become unreadable at someone's whim.
+
+[`git-issue`]: https://github.com/dspinellis/git-issue
