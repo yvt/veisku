@@ -10,7 +10,8 @@ mod render;
 mod root;
 
 fn main() -> Result<()> {
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("v=info")).init();
+
     let opts: cfg::Opts = Clap::parse();
     log::debug!("opts = {:#?}", opts);
 
