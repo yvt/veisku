@@ -11,6 +11,8 @@ pub struct Opts {
 
 #[derive(Debug, Clap)]
 pub enum Subcommand {
+    /// Print the path of a document
+    Which(Query),
     Edit(Open),
     Open(Open),
     Ls(List),

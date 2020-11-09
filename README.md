@@ -14,3 +14,4 @@ The following operations are supported:
  - Run a command in the document root (`v run`).
  - Open the specified document (`v open`). Accepts the common search query syntax but fails if more than one document matches.
  - Edit the specified document (`v edit`). Accepts the common search query syntax but fails if more than one document matches.
+ - Display the path of the specified document (`v which`). Accepts the common search query syntax but fails if more than one document matches.

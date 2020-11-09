@@ -18,6 +18,7 @@ fn main() -> Result<()> {
     log::debug!("root = {:#?}", root);
 
     match &opts.subcmd {
+        cfg::Subcommand::Which(subcmd) => verb_which(&root, subcmd),
         cfg::Subcommand::Open(subcmd) => {
             verb_open(&root, subcmd, default_viewer).map(|x| match x {})
         }
@@ -27,6 +28,13 @@ fn main() -> Result<()> {
         cfg::Subcommand::Ls(subcmd) => verb_ls(&root, subcmd),
         cfg::Subcommand::Run(subcmd) => verb_run(&root, subcmd).map(|x| match x {}),
     }
+}
+
+fn verb_which(root: &root::DocRoot, sc: &cfg::Query) -> Result<()> {
+    let query = query::Query::from_opt(&root.cfg, sc)?;
+    let doc = query::select_one(root, &query)?;
+    println!("{}", doc.path().display());
+    Ok(())
 }
 
 fn verb_open(
