@@ -74,6 +74,10 @@ impl DocRoot {
             cfg,
         })
     }
+
+    pub fn script_dir_path(&self) -> PathBuf {
+        self.path.join("bin")
+    }
 }
 
 /// Get the configuration directory path for the specified document root.

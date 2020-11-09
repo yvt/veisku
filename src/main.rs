@@ -1,7 +1,7 @@
 use ansi_term::Color;
 use anyhow::{Context, Result};
-use clap::Clap;
-use std::{convert::Infallible, ffi::OsString, io::Write};
+use clap::{Clap, IntoApp};
+use std::{convert::Infallible, ffi::OsString, io::Write, mem::replace, path::Path};
 
 mod cfg;
 mod doc;
@@ -18,19 +18,26 @@ fn main() -> Result<()> {
     let root = root::DocRoot::current().context("Failed to get the document root")?;
     log::debug!("root = {:#?}", root);
 
-    match &opts.subcmd {
-        cfg::Subcommand::Which(subcmd) => verb_which(&root, subcmd),
-        cfg::Subcommand::Open(subcmd) => {
-            verb_open(&root, subcmd, default_opener).map(|x| match x {})
+    if let Some(subcmd) = &opts.subcmd {
+        match subcmd {
+            cfg::Subcommand::Which(subcmd) => verb_which(&root, subcmd),
+            cfg::Subcommand::Open(subcmd) => {
+                verb_open(&root, subcmd, default_opener).map(|x| match x {})
+            }
+            cfg::Subcommand::Show(subcmd) => {
+                verb_open(&root, subcmd, default_viewer).map(|x| match x {})
+            }
+            cfg::Subcommand::Edit(subcmd) => {
+                verb_open(&root, subcmd, default_editor).map(|x| match x {})
+            }
+            cfg::Subcommand::Ls(subcmd) => verb_ls(&root, &opts, subcmd),
+            cfg::Subcommand::Run(subcmd) => verb_run(&root, subcmd).map(|x| match x {}),
         }
-        cfg::Subcommand::Show(subcmd) => {
-            verb_open(&root, subcmd, default_viewer).map(|x| match x {})
-        }
-        cfg::Subcommand::Edit(subcmd) => {
-            verb_open(&root, subcmd, default_editor).map(|x| match x {})
-        }
-        cfg::Subcommand::Ls(subcmd) => verb_ls(&root, &opts, subcmd),
-        cfg::Subcommand::Run(subcmd) => verb_run(&root, subcmd).map(|x| match x {}),
+    } else if opts.cmd.is_empty() {
+        cfg::Opts::into_app().print_help()?;
+        std::process::exit(1);
+    } else {
+        verb_run_script(&root, opts.cmd).map(|x| match x {})
     }
 }
 
@@ -46,6 +53,9 @@ fn verb_open(
     sc: &cfg::Open,
     default_cmd: fn() -> OsString,
 ) -> Result<Infallible> {
+    let argv0 = std::env::args_os().next().unwrap();
+    log::debug!("argv0 = {:?} (passed as V variable)", argv0);
+
     let query = query::Query::from_opt(&root.cfg, &sc.query)?;
     let doc = query::select_one(root, &query)?;
 
@@ -69,6 +79,7 @@ fn verb_open(
 
     let mut cmd = std::process::Command::new(&argv[0]);
     cmd.args(&argv[1..]);
+    cmd.env("V", &argv0);
 
     if !sc.preserve_pwd {
         cmd.current_dir(&root.path);
@@ -195,13 +206,66 @@ fn verb_ls(root: &root::DocRoot, opts: &cfg::Opts, sc: &cfg::List) -> Result<()>
 }
 
 fn verb_run(root: &root::DocRoot, sc: &cfg::Run) -> Result<Infallible> {
+    let argv0 = std::env::args_os().next().unwrap();
+    log::debug!("argv0 = {:?} (passed as V variable)", argv0);
+
     exec(
         std::process::Command::new(&sc.cmd[0])
             .args(&sc.cmd[1..])
+            .env("V", &argv0)
             .current_dir(&root.path),
     )
 }
 
+/// Locate a program at `v-custom-subcommand` or `$root/bin/custom-subcommand`
+/// and execute it.
+fn verb_run_script(root: &root::DocRoot, mut cmd: Vec<OsString>) -> Result<Infallible> {
+    let argv0 = std::env::args_os().next().unwrap();
+    log::debug!("argv0 = {:?} (passed as V variable)", argv0);
+
+    let orig_cmd = replace(&mut cmd[0], OsString::new());
+    let orig_cmd_path = Path::new(&orig_cmd);
+    if orig_cmd_path.is_absolute() {
+        // If `orig_cmd` is an absolute path, do not modify it
+        cmd[0] = orig_cmd.clone();
+    } else {
+        // If `orig_cmd` is a relative path, rebase it to `$root/bin`
+        cmd[0] = root.script_dir_path().join(&orig_cmd).into();
+    }
+
+    log::debug!("Trying to exec {:?}", cmd[0]);
+    let err = match exec(
+        std::process::Command::new(&cmd[0])
+            .args(&cmd[1..])
+            .env("V", &argv0)
+            .current_dir(&root.path),
+    ) {
+        Ok(_) => unreachable!(),
+        Err(e) => e,
+    };
+    log::debug!("Failed to exec {:?}: {:?}", cmd[0], err);
+    let failed_cmd = replace(&mut cmd[0], OsString::new());
+
+    if orig_cmd_path.is_relative() && orig_cmd_path.components().count() == 1 {
+        // If `orig_cmd` is comprised of a single component (i.e., like `hoge`
+        // but not `/aaa/bbb` or `a/b/c`), try `v-xxxxx`
+        cmd[0] = OsString::from("v-");
+        cmd[0].push(&orig_cmd);
+
+        log::debug!("Trying to exec {:?}", cmd[0]);
+        exec(
+            std::process::Command::new(&cmd[0])
+                .args(&cmd[1..])
+                .env("V", &argv0)
+                .current_dir(&root.path),
+        )
+        .with_context(|| format!("Could not execute {:?} or {:?}", failed_cmd, cmd[0]))
+    } else {
+        Err(err).with_context(|| format!("Could not execute {:?}", failed_cmd))
+    }
+}
+
+/// Exec a program.
 fn exec(cmd: &mut std::process::Command) -> Result<Infallible> {
     match () {
         #[cfg(unix)]
@@ -221,7 +285,7 @@ fn exec(cmd: &mut std::process::Command) -> Result<Infallible> {
             if result.success() {
                 std::process::exit(0);
             } else {
-                anyhow::bail!("The child process exited with {}", result.code());
+                std::process::exit(result.code().unwrap_or(1));
             }
         }
     }

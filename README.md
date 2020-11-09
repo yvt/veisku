@@ -14,6 +14,8 @@ The following operations are supported:
 
  - Run a command in the document root (`v run`).
  
+ - Run a script `v-custom-subcommand` or `$root/bin/custom-subcommand` (`v custom-subcommand`).
+
  - Open the specified document (`v open`) using `open` or `xdg-open`. Accepts the common search query syntax but fails if more than one document matches.
 
  - Show the specified document (`v show`) using `$PAGER` or `less`. Accepts the common search query syntax but fails if more than one document matches.

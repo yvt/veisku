@@ -15,7 +15,14 @@ pub struct Opts {
     pub pager: Option<Vec<OsString>>,
 
     #[clap(subcommand)]
-    pub subcmd: Subcommand,
+    pub subcmd: Option<Subcommand>,
+
+    /// The script to execute (if it doesn't match any builtin subcommand).
+    ///
+    /// Given a command `NAME ARGS...`, the program will check the following
+    /// locations to find the script to run: (1) `v-NAME` in `PATH` (2)
+    /// `NAME` in `$root/.veisku/bin`.
+    pub cmd: Vec<OsString>,
 }
 
 #[derive(Debug, Clap)]
