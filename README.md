@@ -1,6 +1,6 @@
 # veisku
 
-Personal file-oriented document manager
+Opinionated, personal file-oriented document manager
 
 This tool operates on a local directory (called a *document root*) containing *documents*. A document root may contain a configuration file `.veisku/config.toml` that controls the default behavior of the tool (see `src/cfg.rs` for the configuration scheme).
 

@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use clap::Clap;
-use std::{convert::Infallible, ffi::OsString};
+use std::{convert::Infallible, ffi::OsString, io::Write};
 
 mod cfg;
 mod doc;
@@ -74,12 +74,74 @@ fn default_editor() -> OsString {
 
 fn verb_ls(root: &root::DocRoot, sc: &cfg::List) -> Result<()> {
     let query = query::Query::from_opt(&root.cfg, &sc.query)?;
+    let docs = query::select_all(root, &query);
+    let mut out = std::io::BufWriter::new(std::io::stdout());
 
-    for doc_or_error in query::select_all(root, &query) {
-        let doc = doc_or_error.context("An error occurred while listing documents")?;
-        println!("{}", doc);
+    #[derive(Debug, thiserror::Error)]
+    #[error("An error occurred while enumerating matching documents")]
+    struct SearchError;
+
+    #[derive(Debug, thiserror::Error)]
+    #[error("An error occurred while writing to the standard output")]
+    struct WriteError;
+
+    #[derive(Debug, thiserror::Error)]
+    #[error("An error occurred while reading the metadata of {0:?}")]
+    struct ReadError(std::path::PathBuf);
+
+    if sc.simple {
+        for doc_or_error in docs {
+            let doc = doc_or_error.context(SearchError)?;
+            writeln!(out, "{}", doc).context(WriteError)?;
+        }
+    } else if sc.json {
+        #[derive(serde::Serialize)]
+        struct JsonDoc {
+            path: String,
+            // TODO: meta
+        }
+        writeln!(out, "[").context(WriteError)?;
+        for (i, doc_or_error) in docs.enumerate() {
+            let doc = doc_or_error.context(SearchError)?;
+            if i > 0 {
+                write!(out, ",\n  ").context(WriteError)?;
+            } else {
+                write!(out, "  ").context(WriteError)?;
+            }
+            let json = serde_json::to_string(&JsonDoc {
+                path: doc.path().to_string_lossy().into_owned(),
+            })
+            .unwrap();
+            write!(out, "{}", json).context(WriteError)?;
+        }
+        writeln!(out, "\n]").context(WriteError)?;
+    } else {
+        for doc_or_error in docs {
+            let mut doc = doc_or_error.context(SearchError)?;
+            let path = doc.path().to_owned();
+            let name = path.file_stem().unwrap();
+            let meta = doc.ensure_meta().with_context(|| ReadError(path.clone()))?;
+
+            // Base name
+            write!(out, "{:10} ", name.to_string_lossy()).context(WriteError)?;
+
+            // Tags
+            if let yaml_rust::Yaml::Array(array) = &meta["tags"] {
+                for e in array.iter() {
+                    if let yaml_rust::Yaml::String(st) = e {
+                        write!(out, "[{}] ", st).context(WriteError)?;
+                    }
+                }
+            }
+
+            // Title
+            if let yaml_rust::Yaml::String(st) = &meta["title"] {
+                write!(out, "{}", st).context(WriteError)?;
+            }
+
+            write!(out, "\n").context(WriteError)?;
+        }
     }
-
     Ok(())
 }
 

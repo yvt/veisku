@@ -8,6 +8,8 @@ publish = false
 
 [dependencies]
 env_logger = { version = "0.8.1" }
+serde_json = { version = "1.0.59" }
+thiserror = { version = "1.0.22" }
 yaml-rust = { version = "0.4.4" }
 globwalk = { version = "0.8.0" }
 anyhow = { version = "1.0.34" }

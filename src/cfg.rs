@@ -22,6 +22,12 @@ pub enum Subcommand {
 pub struct List {
     #[clap(flatten)]
     pub query: Query,
+    /// Display only full paths
+    #[clap(short = '1', group = "mode")]
+    pub simple: bool,
+    /// Display the result in JSON
+    #[clap(short = 'j', group = "mode")]
+    pub json: bool,
 }
 
 /// Open a document
