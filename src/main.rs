@@ -96,13 +96,14 @@ fn verb_ls(root: &root::DocRoot, sc: &cfg::List) -> Result<()> {
         }
     } else if sc.json {
         #[derive(serde::Serialize)]
-        struct JsonDoc {
+        struct JsonDoc<'a> {
             path: String,
-            // TODO: meta
+            meta: &'a serde_yaml::Value,
         }
         writeln!(out, "[").context(WriteError)?;
         for (i, doc_or_error) in docs.enumerate() {
-            let doc = doc_or_error.context(SearchError)?;
+            let mut doc = doc_or_error.context(SearchError)?;
+            let path = doc.path().to_owned();
             if i > 0 {
                 write!(out, ",\n  ").context(WriteError)?;
             } else {
@@ -110,6 +111,7 @@ fn verb_ls(root: &root::DocRoot, sc: &cfg::List) -> Result<()> {
             }
             let json = serde_json::to_string(&JsonDoc {
                 path: doc.path().to_string_lossy().into_owned(),
+                meta: doc.ensure_meta().with_context(|| ReadError(path.clone()))?,
             })
             .unwrap();
             write!(out, "{}", json).context(WriteError)?;

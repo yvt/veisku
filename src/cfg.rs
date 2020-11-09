@@ -23,10 +23,10 @@ pub struct List {
     #[clap(flatten)]
     pub query: Query,
     /// Display only full paths
-    #[clap(short = '1', group = "mode")]
+    #[clap(short = '1', long = "simple", group = "mode")]
     pub simple: bool,
     /// Display the result in JSON
-    #[clap(short = 'j', group = "mode")]
+    #[clap(short = 'j', long = "json", group = "mode")]
     pub json: bool,
 }
 
