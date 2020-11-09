@@ -47,10 +47,20 @@ pub struct Open {
     /// If the value contains at least one `{}`, they will be replaced with the
     /// document's path. Otherwise, the path will be appended to the command
     /// line.
-    #[clap(short = 'c', long = "command", multiple = true, min_values = 1, require_delimiter = true)]
+    #[clap(
+        short = 'c',
+        long = "command",
+        multiple = true,
+        min_values = 1,
+        require_delimiter = true
+    )]
     pub cmd: Option<Vec<OsString>>,
     #[clap(flatten)]
     pub query: Query,
+    /// Preserves the current working directory (does not cd to the document
+    /// root).
+    #[clap(short = 'p', long = "preserve-pwd")]
+    pub preserve_pwd: bool,
 }
 
 /// Execute a command in the document root

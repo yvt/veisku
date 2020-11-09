@@ -49,7 +49,7 @@ fn verb_open(
     let query = query::Query::from_opt(&root.cfg, &sc.query)?;
     let doc = query::select_one(root, &query)?;
 
-    let cmd = if let Some(cmd) = &sc.cmd {
+    let argv = if let Some(cmd) = &sc.cmd {
         let mut cmd: Vec<OsString> = cmd.clone();
 
         if cmd.iter().any(|x| x == "{}") {
@@ -67,7 +67,14 @@ fn verb_open(
         vec![default_cmd(), doc.path().into()]
     };
 
-    exec(std::process::Command::new(&cmd[0]).args(&cmd[1..]))
+    let mut cmd = std::process::Command::new(&argv[0]);
+    cmd.args(&argv[1..]);
+
+    if !sc.preserve_pwd {
+        cmd.current_dir(&root.path);
+    }
+
+    exec(&mut cmd)
 }
 
 fn default_opener() -> OsString {
