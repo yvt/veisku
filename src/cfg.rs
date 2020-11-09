@@ -1,6 +1,6 @@
 use clap::Clap;
 use serde::Deserialize;
-use std::{ffi::OsString, str::FromStr};
+use std::{collections::HashMap, ffi::OsString, str::FromStr};
 
 /// Personal file-oriented document manager
 #[derive(Debug, Clap)]
@@ -186,6 +186,10 @@ pub struct Cfg {
     /// The paths are relative to the document root.
     #[serde(default = "files_default")]
     pub files: Vec<String>,
+
+    /// Specifies the text styles applied to various elements
+    #[serde(default)]
+    pub theme: ThemeCfg,
 }
 
 fn files_default() -> Vec<String> {
@@ -194,4 +198,132 @@ fn files_default() -> Vec<String> {
         .cloned()
         .map(String::from)
         .collect()
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ThemeCfg {
+    /// The mapping between tags and text styles.
+    #[serde(default)]
+    pub tags: HashMap<String, StyleCfg>,
+    #[serde(default = "default_tag_default")]
+    pub tag_default: StyleCfg,
+}
+
+impl Default for ThemeCfg {
+    fn default() -> Self {
+        Self {
+            tags: HashMap::new(),
+            tag_default: default_tag_default(),
+        }
+    }
+}
+
+fn default_tag_default() -> StyleCfg {
+    StyleCfg {
+        fg: Some(ColorCfg {
+            ansi_term_color: ansi_term::Color::Green,
+        }),
+        bg: Some(ColorCfg {
+            ansi_term_color: ansi_term::Color::RGB(64, 64, 64),
+        }),
+        bold: false,
+        italic: false,
+    }
+}
+
+/// Text style
+#[derive(Debug, Default, Deserialize)]
+pub struct StyleCfg {
+    /// The foreground color
+    #[serde(default)]
+    fg: Option<ColorCfg>,
+
+    /// The background color
+    #[serde(default)]
+    bg: Option<ColorCfg>,
+
+    #[serde(default)]
+    bold: bool,
+
+    #[serde(default)]
+    italic: bool,
+}
+
+impl StyleCfg {
+    pub fn ansi_term_style(&self) -> ansi_term::Style {
+        ansi_term::Style {
+            background: self.bg.map(|c| c.ansi_term_color),
+            foreground: self.fg.map(|c| c.ansi_term_color),
+            is_bold: self.bold,
+            is_italic: self.italic,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct ColorCfg {
+    ansi_term_color: ansi_term::Color,
+}
+
+impl<'de> Deserialize<'de> for ColorCfg {
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        let st = String::deserialize(de)?;
+
+        let ansi_term_color = match &*st {
+            "black" => ansi_term::Color::Black,
+            "red" => ansi_term::Color::Red,
+            "green" => ansi_term::Color::Green,
+            "yellow" => ansi_term::Color::Yellow,
+            "blue" => ansi_term::Color::Blue,
+            "purple" => ansi_term::Color::Purple,
+            "cyan" => ansi_term::Color::Cyan,
+            "white" => ansi_term::Color::White,
+            _ => {
+                if let Some([r, g, b]) = parse_hex_color(&st) {
+                    ansi_term::Color::RGB(r, g, b)
+                } else {
+                    return Err(D::Error::custom(format_args!(
+                        "invalid hexadecimal color specification: '{}'",
+                        st
+                    )));
+                }
+            }
+        };
+
+        Ok(Self { ansi_term_color })
+    }
+}
+
+#[allow(unstable_name_collisions)] // `[_; T]::map` is compatible with `array:Array3::map`
+fn parse_hex_color(s: &str) -> Option<[u8; 3]> {
+    use array::Array3;
+    let bytes = s.as_bytes();
+    if bytes[0] == b'#' {
+        if bytes.len() == 4 {
+            if let [Ok(r), Ok(g), Ok(b)] =
+                [&s[1..], &s[2..], &s[3..]].map(|x| u8::from_str_radix(&x[..1], 16))
+            {
+                Some([r * 0x11, g * 0x11, b * 0x11])
+            } else {
+                None
+            }
+        } else if bytes.len() == 7 {
+            if let [Ok(r), Ok(g), Ok(b)] =
+                [&s[1..], &s[3..], &s[5..]].map(|x| u8::from_str_radix(&x[..2], 16))
+            {
+                Some([r, g, b])
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    }
 }

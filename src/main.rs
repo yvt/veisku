@@ -1,4 +1,4 @@
-use ansi_term::{Color, Style};
+use ansi_term::Color;
 use anyhow::{Context, Result};
 use clap::Clap;
 use std::{convert::Infallible, ffi::OsString, io::Write};
@@ -164,15 +164,14 @@ fn verb_ls(root: &root::DocRoot, sc: &cfg::List) -> Result<()> {
 
             // Tags
             if let serde_yaml::Value::Sequence(array) = &meta["tags"] {
+                let theme = &root.cfg.theme;
                 for e in array.iter() {
                     if let serde_yaml::Value::String(st) = e {
+                        let style = theme.tags.get(&*st).unwrap_or(&theme.tag_default);
                         write!(
                             out,
                             "{} ",
-                            Style::new()
-                                .fg(Color::Green)
-                                .on(Color::Fixed(238))
-                                .paint(format!(" {} ", st))
+                            style.ansi_term_style().paint(format!(" {} ", st))
                         )
                         .context(WriteError)?;
                     }
