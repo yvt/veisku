@@ -15,6 +15,7 @@ pub enum Subcommand {
     Which(Query),
     Edit(Open),
     Open(Open),
+    Show(Open),
     Ls(List),
     Run(Run),
 }
@@ -36,6 +37,9 @@ pub struct List {
 ///
 /// The search criteria must select exactly one document, or the operation will
 /// fail.
+///
+/// There are variations of this subcommand: edit, open, show. The only
+/// differences between them are the default commands they use.
 #[derive(Debug, Clap)]
 pub struct Open {
     /// The command to open or edit a document.

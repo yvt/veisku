@@ -20,6 +20,9 @@ fn main() -> Result<()> {
     match &opts.subcmd {
         cfg::Subcommand::Which(subcmd) => verb_which(&root, subcmd),
         cfg::Subcommand::Open(subcmd) => {
+            verb_open(&root, subcmd, default_opener).map(|x| match x {})
+        }
+        cfg::Subcommand::Show(subcmd) => {
             verb_open(&root, subcmd, default_viewer).map(|x| match x {})
         }
         cfg::Subcommand::Edit(subcmd) => {
@@ -66,8 +69,16 @@ fn verb_open(
     exec(std::process::Command::new(&cmd[0]).args(&cmd[1..]))
 }
 
+fn default_opener() -> OsString {
+    if cfg!(target_os = "macos") {
+        "open".into()
+    } else {
+        "xdg-open".into()
+    }
+}
+
 fn default_viewer() -> OsString {
-    if let Some(e) = std::env::var_os("SCREEN") {
+    if let Some(e) = std::env::var_os("PAGER") {
         e
     } else {
         "less".into()
